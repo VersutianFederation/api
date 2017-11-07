@@ -2,7 +2,7 @@ var admin = require("firebase-admin");
 var express = require("express");
 var cors = require("cors");
 var app = express();
-var port = 80;
+var port = 8080;
 
 var serviceAccount = require("/opt/firebase/key.json");
 
