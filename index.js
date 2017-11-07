@@ -3,6 +3,7 @@ var express = require("express");
 var cors = require("cors");
 var app = express();
 var port = 80;
+var hostname = 'api.versutian.site';
 
 var serviceAccount = require("/opt/firebase/key.json");
 
@@ -12,7 +13,7 @@ admin.initializeApp({
 });
 
 app.use(cors());
-app.listen(port);
+app.listen(port, hostname);
 
 app.get('/token', function(req, res) {
   var uid = req.query.nation;
