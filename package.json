@@ -22,6 +22,9 @@
   "dependencies": {
     "cors": "^2.8.4",
     "express": "^4.16.2",
-    "firebase-admin": "^5.4.3"
+    "firebase-admin": "^5.4.3",
+    "jsdom": "^11.3.0",
+    "jsonwebtoken": "^8.1.0",
+    "request": "^2.83.0"
   }
 }
