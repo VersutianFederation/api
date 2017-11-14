@@ -98,8 +98,14 @@ app.get('/token', function(req, res) {
   var check = req.query.token;
   var uid = req.query.nation;
   if (check && uid) {
-    request('https://www.nationstates.net/cgi-bin/api.cgi?a=verify&nation=' + uid + '&checksum=' + check, function(reqe, reqr, reqb) {
-      if (reqb != 0) {
+    var options = {
+       url: 'https://www.nationstates.net/cgi-bin/api.cgi?a=verify&nation=' + uid + '&checksum=' + check,
+       headers: {
+         'User-Agent': 'Versutian Web Service by Humantus'
+       }
+    }
+    request(options, function(reqe, reqr, reqb) {
+      if (reqb && reqb.includes('1')) {
         nsNation(uid, ['flag', 'name'], function(data) {
          var claims = {
             nation: data.get('name'),
