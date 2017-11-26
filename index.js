@@ -2,7 +2,6 @@ var admin = require("firebase-admin");
 var express = require("express");
 var request = require("request");
 var cors = require("cors");
-var text = require("textbelt");
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 
@@ -149,6 +148,7 @@ app.get('/loot', function(req, res) {
          lootMap.set(nation, add);
        }
      }
+     res.send('1');
   } else if (nation) {
     if (lootMap.has(nation) && lootMap.get(nation) > 0) {
       lootMap.set(nation, lootMap.get(nation) - 1);
@@ -193,15 +193,16 @@ app.get('/loot', function(req, res) {
          item = 'Firey Passion Effect';
          tier = 5;
       }
-      res.send({
-        tier: tier,
-        item: item,
-        special: special
-      });
-      text.send(lootkeys.number, nation + ' received a ' + item, 'us', function(err) {
-        if (err) {
-          console.log(err);
-        }
+      request({method: 'POST', uri: lootkeys.ping, json: true, body: {content: nation + ' received a ' + item}}, function(err, response, body) {
+         if (err) {
+           res.send('0');
+         } else {
+           res.send({
+            tier: tier,
+            item: item,
+            special: special
+           });
+         }
       });
     } else {
       res.send('0');
@@ -213,11 +214,15 @@ app.get('/equip', function(req, res) {
   var item = req.query.item;
   var nation = req.query.nation;
   if (item && nation) {
-    text.send(lootkeys.number, nation + ' equipped a ' + item, 'us', function(err) {
-      if (err) {
-        console.log(err);
-      }
-    });
+      request({method: 'POST', uri: lootkeys.ping, json: true, body: {content: nation + ' received a ' + item}}, function(err, response, body) {
+         if (err) {
+           res.send('0');
+         } else {
+           res.send('1');
+         }
+      });
+  } else {
+    res.send('0');
   }
 });
 
@@ -229,5 +234,7 @@ app.get('/boxes', function(req, res) {
       count: count,
       special: hasSpecial(nation)
     });
+  } else {
+    res.send('0');
   }
 });
