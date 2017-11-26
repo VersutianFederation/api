@@ -149,7 +149,7 @@ app.get('/loot', function(req, res) {
          lootMap.set(nation, add);
        }
      }
-  } else {
+  } else if (nation) {
     if (lootMap.has(nation) && lootMap.get(nation) > 0) {
       lootMap.set(nation, lootMap.get(nation) - 1);
       var tierRoll = Math.random();
@@ -212,18 +212,22 @@ app.get('/loot', function(req, res) {
 app.get('/equip', function(req, res) {
   var item = req.query.item;
   var nation = req.query.nation;
-  text.send(lootkeys.number, nation + ' equipped a ' + item, 'us', function(err) {
-    if (err) {
-      console.log(err);
-    }
-  });
+  if (item && nation) {
+    text.send(lootkeys.number, nation + ' equipped a ' + item, 'us', function(err) {
+      if (err) {
+        console.log(err);
+      }
+    });
+  }
 });
 
 app.get('/boxes', function(req, res) {
   var nation = req.query.nation;
-  var count = lootMap.has(nation) ? lootMap.get(nation) : 0;
-  res.send({
-    count: count,
-    special: hasSpecial(nation)
-  });
+  if (nation) {
+    var count = lootMap.has(nation) ? lootMap.get(nation) : 0;
+    res.send({
+      count: count,
+      special: hasSpecial(nation)
+    });
+  }
 });
