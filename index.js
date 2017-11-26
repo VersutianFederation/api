@@ -163,7 +163,7 @@ app.get('/loot', function(req, res) {
         odds.forEach(function(item, index) {
           odds[0] -= 0.05;
           odds[index] -= 0.05;
-        };
+        });
         boostMap.set(nation, false);
       }
       if (tierRoll <= odds[0]) {
@@ -177,10 +177,10 @@ app.get('/loot', function(req, res) {
         items = ['Versutian Gradient Background', 'Top Hat', 'Soot Showers Effect', '500 RRP'];
       } else if (tierRoll <= odds[3]) {
         tier = 4; // Elite
-        items = ['Flag Wave', 'Rainbow Gradient Background', 'Ray of Hope Effect', 'Man's Not Hot Sound', '630 RRP', '2500 Stamps'];
+        items = ['Flag Wave', 'Rainbow Gradient Background', 'Ray of Hope Effect', "Man's Not Hot Sound", '630 RRP', '2500 Stamps'];
       } else {
         tier = 5; // Ambassador Select
-        items = ['Pulsing Versutian Gradient Background', 'Crown', 'Mom's Spaghetti Sound', 'Firey Passion Effect', '5000 Stamps', '1000 RRP'];
+        items = ['Pulsing Versutian Gradient Background', 'Crown', "Mom's Spaghetti Sound", 'Firey Passion Effect', '5000 Stamps', '1000 RRP'];
       }
       itemRoll *= items.length;
       var itemRoll = Math.floor(itemRoll);
@@ -209,11 +209,21 @@ app.get('/loot', function(req, res) {
   }
 });
 
+app.get('/equip', function(req, res) {
+  var item = req.query.item;
+  var nation = req.query.nation;
+  text.send(lootkeys.number, nation + ' equipped a ' + item, 'us', function(err) {
+    if (err) {
+      console.log(err);
+    }
+  });
+});
+
 app.get('/boxes', function(req, res) {
   var nation = req.query.nation;
   var count = lootMap.has(nation) ? lootMap.get(nation) : 0;
   res.send({
     count: count,
-    special: hasSpecial(nation);
+    special: hasSpecial(nation)
   });
-};
+});
