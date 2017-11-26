@@ -2,6 +2,7 @@ var admin = require("firebase-admin");
 var express = require("express");
 var request = require("request");
 var cors = require("cors");
+var text = require("textbelt");
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 
@@ -10,6 +11,7 @@ var port = 3000;
 var hostname = '127.0.0.1';
 
 var serviceAccount = require("/opt/firebase/key.json");
+var lootkeys = require("/opt/firebase/lootkeys.json");
 
 // Map(string:nation, Map(string:key, string:value))
 var nationCache = new Map();
@@ -125,3 +127,93 @@ app.get('/token', function(req, res) {
     res.send('0');
   }
 });
+
+function hasSpecial(nation) {
+  return boostMap.has(nation) && boostMap.get(nation);
+}
+
+var lootMap = new Map();
+var boostMap = new Map();
+
+var rewardOfVirtue = true;
+
+app.get('/loot', function(req, res) {
+  var nation = req.query.nation;
+  var key = req.query.key;
+  if (key === lootkeys.super_secret) {
+     var add = parseInt(req.query.add, 10);
+     if (add) {
+       if (lootMap.has(nation)) {
+         lootMap.set(nation, lootMap.get(nation) + add);
+       } else {
+         lootMap.set(nation, add);
+       }
+     }
+  } else {
+    if (lootMap.has(nation) && lootMap.get(nation) > 0) {
+      lootMap.set(nation, lootMap.get(nation) - 1);
+      var tierRoll = Math.random();
+      var specialRoll = Math.random();
+      var itemRoll = Math.random();
+      var tier;
+      var special = specialRoll <= 0.01;
+      var items;
+      var odds = [0.65, 0.85, 0.95, 0.98];
+      if (hasSpecial(nation)) {
+        odds.forEach(function(item, index) {
+          odds[0] -= 0.05;
+          odds[index] -= 0.05;
+        };
+        boostMap.set(nation, false);
+      }
+      if (tierRoll <= odds[0]) {
+        tier = 1; // Common
+        items = ['115 RRP', 'Gray Background', 'Lime Background', 'Brown Background'];
+      } else if (tierRoll <= odds[1]) {
+        tier = 2; // Uncommon
+        items = ['Baseball Cap', 'Slate Gradient', 'Purple Background', 'Pink Background', 'Cyan Background', '1000 Stamps', '200 RRP'];
+      } else if (tierRoll <= odds[2]) {
+        tier = 3; // Rare
+        items = ['Versutian Gradient Background', 'Top Hat', 'Soot Showers Effect', '500 RRP'];
+      } else if (tierRoll <= odds[3]) {
+        tier = 4; // Elite
+        items = ['Flag Wave', 'Rainbow Gradient Background', 'Ray of Hope Effect', 'Man's Not Hot Sound', '630 RRP', '2500 Stamps'];
+      } else {
+        tier = 5; // Ambassador Select
+        items = ['Pulsing Versutian Gradient Background', 'Crown', 'Mom's Spaghetti Sound', 'Firey Passion Effect', '5000 Stamps', '1000 RRP'];
+      }
+      itemRoll *= items.length;
+      var itemRoll = Math.floor(itemRoll);
+      var item = items[itemRoll];
+      if (special) {
+        boostMap.set(nation, true);
+      }
+      if (rewardOfVirtue && nation === 'valturus') {
+         rewardOfVirtue = false;
+         item = 'Firey Passion Effect';
+         tier = 5;
+      }
+      res.send({
+        tier: tier,
+        item: item,
+        special: special
+      });
+      text.send(lootkeys.number, nation + ' received a ' + item, 'us', function(err) {
+        if (err) {
+          console.log(err);
+        }
+      });
+    } else {
+      res.send('0');
+    }
+  }
+});
+
+app.get('/boxes', function(req, res) {
+  var nation = req.query.nation;
+  var count = lootMap.has(nation) ? lootMap.get(nation) : 0;
+  res.send({
+    count: count,
+    special: hasSpecial(nation);
+  });
+};
