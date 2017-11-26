@@ -193,7 +193,7 @@ app.get('/loot', function(req, res) {
          item = 'Firey Passion Effect';
          tier = 5;
       }
-      request({method: 'POST', uri: lootkeys.ping, json: true, body: {content: nation + ' received a ' + item}}, function(err, response, body) {
+      request({method: 'POST', uri: lootkeys.ping, json: true, body: {content: nation + ' received ' + (special ? 'Special ' : '') + item}}, function(err, response, body) {
          if (err) {
            res.send('0');
          } else {
