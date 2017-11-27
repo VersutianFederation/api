@@ -134,8 +134,6 @@ function hasSpecial(nation) {
 var lootMap = new Map();
 var boostMap = new Map();
 
-var rewardOfVirtue = true;
-
 app.get('/loot', function(req, res) {
   var nation = req.query.nation;
   var key = req.query.key;
@@ -161,8 +159,7 @@ app.get('/loot', function(req, res) {
       var odds = [0.65, 0.85, 0.95, 0.98];
       if (hasSpecial(nation)) {
         odds.forEach(function(item, index) {
-          odds[0] -= 0.05;
-          odds[index] -= 0.05;
+          odds[index] -= (0.05 * (odds.length - index));
         });
         boostMap.set(nation, false);
       }
@@ -188,11 +185,6 @@ app.get('/loot', function(req, res) {
       if (special) {
         boostMap.set(nation, true);
       }
-      if (rewardOfVirtue && nation === 'valturus') {
-         rewardOfVirtue = false;
-         item = 'Firey Passion Effect';
-         tier = 5;
-      }
       request({method: 'POST', uri: lootkeys.ping, json: true, body: {content: nation + ' received ' + (special ? 'Special ' : '') + item}}, function(err, response, body) {
          if (err) {
            res.send('0');
@@ -204,6 +196,13 @@ app.get('/loot', function(req, res) {
            });
          }
       });
+      if (tier > 3 || special) {
+        nsNation(nation, ['name', 'flag'], function(data) {
+          var nationName = data.get('name');
+          var flagImg = data.get('flag');
+	  request({method: 'POST', uri: lootkeys.ping2, json: true, body: {content: '**' + nationName + '** just received an exceedingly rare drop: _' + (special ? 'Special ' : '') + item + '_!!!', avatar_url: flagImg}});
+        });
+      }
     } else {
       res.send('0');
     }
@@ -214,7 +213,7 @@ app.get('/equip', function(req, res) {
   var item = req.query.item;
   var nation = req.query.nation;
   if (item && nation) {
-      request({method: 'POST', uri: lootkeys.ping, json: true, body: {content: nation + ' received a ' + item}}, function(err, response, body) {
+      request({method: 'POST', uri: lootkeys.ping, json: true, body: {content: nation + ' equipped ' + item}}, function(err, response, body) {
          if (err) {
            res.send('0');
          } else {
