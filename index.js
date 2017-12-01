@@ -82,7 +82,9 @@ function nsNation(nation, data, callback) {
         }
 }
 
-app.use(cors());
+app.use(cors({
+  origin: '/versutian.site\.site$/'
+}));
 app.use(cookieParser());
 
 var cookieOptions = {
