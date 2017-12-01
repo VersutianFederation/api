@@ -140,7 +140,7 @@ app.get('/auth/state', function(req, res) {
 app.get('/auth/verify', function(req, res) {
   var token = req.cookies.token;
   admin.auth().verifyIdToken(token).then(function(decodedToken) {
-    res.send('1');
+    res.send(decodedToken);
   }).catch(function(error) {
     console.log('Error verifying token: ', error);
     res.send('0');
