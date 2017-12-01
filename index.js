@@ -420,7 +420,7 @@ app.get('/wg/member/add', function(req, res) {
     return;
   }
   res.send('0');
-})
+});
 
 app.get('/wg/loot/roll', function(req, res) {
   var token = req.cookies.token; // JWT
@@ -545,6 +545,52 @@ app.get('/wg/loot/inventory', function(req, res) {
     return;
   }
   res.send('0');
+});
+
+app.get('/admin/save', function (req, res) {
+  var token = req.cookies.token; // JWT
+  // are they authed
+  if (token) {
+    // decode their JWT
+    admin.auth().verifyIdToken(token).then(function(user) {
+      var uid = user.uid; // username
+      // are they authorized to save
+      if (wGuildOfficers.includes(uid)) {
+        write = {};
+        wGuildNations.forEach(function (member, name) {
+          // collect properties
+          Object.defineProperty(write, name, {
+            configurable: true,
+            writable: true,
+            enumerable: true,
+            value: {
+              points: members.points,
+              livePoints: member.livePoints,
+              gain: member.gain,
+              bonus: member.bonus,
+              rate: member.rate,
+              lootboxes: member.lootboxes,
+              freeLootbox: member.freeLootbox,
+              lootBoost: member.lootAccounts,
+              highestRank: member.highestRank
+            }
+          });
+        });
+        // save data
+        jsonfile.writeFile(WG_DATA_FILE, write, function(err) {
+          console.log('Failed saving data: ', err)
+          res.send('0')
+        });
+      } else {
+        res.send('0');
+      }
+    }).catch(function(error) {
+      console.log("Error verifying token: ", error);
+      res.send('0');
+    });
+  } else {
+    res.send('0');
+  }
 });
 
 app.listen(port, hostname);
