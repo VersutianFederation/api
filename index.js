@@ -135,7 +135,17 @@ app.get('/auth/state', function(req, res) {
     console.log('Error saving token: ', error);
     res.send('0');
   });
-})
+});
+
+app.get('/auth/verify', function(req, res) {
+  var token = req.cookies.token;
+  admin.auth().verifyIdToken(token).then(function(decodedToken) {
+    res.send('1');
+  }).catch(function(error) {
+    console.log('Error verifying token: ', error);
+    res.send('0');
+  });
+});
 
 app.get('/auth/clear', function(req, res) {
   res.clearCookie('token', cookieOptions);
