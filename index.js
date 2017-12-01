@@ -83,7 +83,7 @@ function nsNation(nation, data, callback) {
 }
 
 app.use(cors({
-  origin: '/versutian.site\.site$/'
+  origin: '/versutian\.site$/'
 }));
 app.use(cookieParser());
 
