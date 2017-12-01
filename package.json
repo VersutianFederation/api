@@ -20,11 +20,14 @@
   },
   "homepage": "https://github.com/VersutianFederation/api#readme",
   "dependencies": {
+    "cookie-parser": "^1.4.3",
     "cors": "^2.8.4",
     "express": "^4.16.2",
-    "firebase-admin": "^5.4.3",
-    "jsdom": "^11.3.0",
+    "firebase-admin": "^5.5.1",
+    "jsdom": "^11.5.1",
+    "jsonfile": "^4.0.0",
     "jsonwebtoken": "^8.1.0",
+    "node-schedule": "^1.2.5",
     "request": "^2.83.0"
   }
 }
