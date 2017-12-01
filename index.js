@@ -397,7 +397,7 @@ app.get('/wg/member/add', function(req, res) {
         wGuildNations.set(nation, new WGuildNationData(nation));
         res.send('1');
         // Announce a new member!
-        nsNation(member, ['name', 'flag'], function(data) {
+        nsNation(nation, ['name', 'flag'], function(data) {
           // Get friendly name and flag URL
           var nationName = data.get('name');
           var flagImg = data.get('flag');
@@ -466,7 +466,7 @@ app.get('/wg/loot/roll', function(req, res) {
           var item = items[Math.floor(Math.random() * items.length)]; // what item in the tier
           nation.lootBoost = Math.random() <= 0.01; // if special
           // Notify admin Discord
-          request({method: 'POST', uri: lootAccounts.announce.admin, json: true, body: {content: nation + ' received ' + (special ? 'Special ' : '') + item}}, function(err, response, body) {
+          request({method: 'POST', uri: lootAccounts.announce.admin, json: true, body: {content: nation.name + ' received ' + (nation.lootBoost ? 'Special ' : '') + item}}, function(err, response, body) {
             if (!err) {
               // Give client loot info
               res.send({
