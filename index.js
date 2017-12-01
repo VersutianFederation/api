@@ -110,8 +110,7 @@ app.get('/auth/token', function(req, res) {
             flag: data.get('flag')
           };
           admin.auth().createCustomToken(uid, claims).then(function(token) {
-            res.cookie('token', token, cookieOptions)
-            res.send(token);
+            res.cookie('token', token, cookieOptions).send(token);
           }).catch(function(error) {
             console.log("Error creating token: ", error);
             res.send('0');
