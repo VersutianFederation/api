@@ -112,7 +112,7 @@ app.get('/auth/token', function(req, res) {
             flag: data.get('flag')
           };
           admin.auth().createCustomToken(uid, claims).then(function(token) {
-            res.cookie('token', token, cookieOptions).send(token);
+            res.send(token);
           }).catch(function(error) {
             console.log("Error creating token: ", error);
             res.send('0');
@@ -124,6 +124,17 @@ app.get('/auth/token', function(req, res) {
   }
   res.send('0');
 });
+
+app.get('/auth/state', function(req, res) {
+  var token = req.query.token;
+  // verify legitimacy of token
+  admin.auth().verifyIdToken(token).then(function(decodedToken) {
+    res.cookie('token', token, cookieOptions).send('1');
+  }).catch(function(error) {
+    console.log('Error saving token: ', error);
+    res.send('0');
+  });
+})
 
 app.get('/auth/clear', function(req, res) {
   res.clearCookie('token', cookieOptions);
