@@ -564,7 +564,7 @@ app.get('/admin/save', function (req, res) {
             writable: true,
             enumerable: true,
             value: {
-              points: members.points,
+              points: member.points,
               livePoints: member.livePoints,
               gain: member.gain,
               bonus: member.bonus,
@@ -608,7 +608,7 @@ function updateDaily() {
       writable: true,
       enumerable: true,
       value: {
-        points: members.points,
+        points: member.points,
         livePoints: member.livePoints,
         gain: member.gain,
         bonus: member.bonus,
