@@ -93,9 +93,9 @@ var cookieOptions = {
 };
 
 app.get('/auth/token', function(req, res) {
-  var check = req.query.token;
   var uid = req.query.nation;
-  if (check && uid) {
+  var check = req.query.code;
+  if (uid && check) {
     var options = {
        url: 'https://www.nationstates.net/cgi-bin/api.cgi?a=verify&nation=' + uid + '&checksum=' + check,
        headers: {
@@ -111,14 +111,15 @@ app.get('/auth/token', function(req, res) {
           };
           admin.auth().createCustomToken(uid, claims).then(function(token) {
             res.cookie('token', token, cookieOptions)
-            res.send('1');
-            return;
+            res.send(token);
           }).catch(function(error) {
             console.log("Error creating token: ", error);
+            res.send('0');
           });
-        });        
+        });
       }
     });
+    return;
   }
   res.send('0');
 });
@@ -344,13 +345,14 @@ app.get('/wg/points/add', function(req, res) {
             // Add the points accordingly
             member.addPoints(add);
             res.send('1');
-            return;
           }
         }
       }
     }).catch(function(error) {
       console.log("Error verifying token: ", error);
+      res.send('0');
     });
+    return;
   }
   res.send('0');
 });
@@ -387,11 +389,12 @@ app.get('/wg/member/add', function(req, res) {
               }
           });
         });
-        return;
       }
     }).catch(function(error) {
       console.log("Error verifying token: ", error);
+      res.send('0');
     });
+    return;
   }
   res.send('0');
 })
@@ -468,12 +471,13 @@ app.get('/wg/loot/roll', function(req, res) {
               }
             }
           });
-          return;
         }
       }
     }).catch(function(error) {
       console.log("Error verifying token: ", error);
+      res.send('0');
     });
+    return;
   }
   res.send('0');
 });
@@ -510,11 +514,12 @@ app.get('/wg/loot/inventory', function(req, res) {
           count: nation.lootboxes,
           special: nation.lootBoost
         });
-        return;
       }
     }).catch(function(error) {
       console.log("Error verifying token: ", error);
+      res.send('0');
     });
+    return;
   }
   res.send('0');
 });
