@@ -70,7 +70,12 @@ function nsNation(nation, data, callback) {
                         nationData.set(request[i], "");
                     } else {
                         // cache data we got from the API
-                        nationData.set(requests[i], dom.window.document.querySelector(requests[i].toUpperCase()).textContent);
+                        var element = dom.window.document.querySelector(requests[i].toUpperCase());
+                        if (element) {
+                          nationData.set(requests[i], element.textContent);
+                        } else {
+                          nationData.set(request[i], "");
+                        }
                     }
                 }
                 // give freshly cached data to the callback
