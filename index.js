@@ -116,35 +116,45 @@ app.get('/auth/token', function(req, res) {
             res.send(token);
           }).catch(function(error) {
             console.log("Error creating token: ", error);
-            res.send('0');
+            res.status(403).send('0');
           });
         });
+      } else {
+        res.status(403).send('0');
       }
     });
-    return;
+  } else {
+    res.status(400).send('0');
   }
-  res.send('0');
 });
 
 app.get('/auth/state', function(req, res) {
   var token = req.query.token;
-  // verify legitimacy of token
-  admin.auth().verifyIdToken(token).then(function(decodedToken) {
-    res.cookie('token', token, cookieOptions).send('1');
-  }).catch(function(error) {
-    console.log('Error saving token: ', error);
-    res.send('0');
-  });
+  if (token) {
+    // verify legitimacy of token
+    admin.auth().verifyIdToken(token).then(function(decodedToken) {
+      res.cookie('token', token, cookieOptions).send('1');
+    }).catch(function(error) {
+      console.log('Error saving token: ', error);
+      res.status(403).send('0');
+    });
+  } else {
+    res.status(400).send('0');
+  }
 });
 
 app.get('/auth/verify', function(req, res) {
   var token = req.cookies.token;
-  admin.auth().verifyIdToken(token).then(function(decodedToken) {
-    res.send(decodedToken);
-  }).catch(function(error) {
-    console.log('Error verifying token: ', error);
-    res.send('0');
-  });
+  if (token) {
+    admin.auth().verifyIdToken(token).then(function(decodedToken) {
+      res.send(decodedToken);
+    }).catch(function(error) {
+      console.log('Error verifying token: ', error);
+      res.status(403).send('0');
+    });
+  } else {
+    res.status(400).send('0');
+  }
 });
 
 app.get('/auth/clear', function(req, res) {
@@ -167,7 +177,7 @@ var wGuildNations = new Map();
 
 jsonfile.readFile(WG_DATA_FILE, function(err, obj) {
   if (err) {
-    console.log('Error reading WG data', err);
+    console.log('Error reading WG data: ', err);
     process.exit(1);
   } else {
     // Load nation data entries from file
@@ -185,7 +195,7 @@ jsonfile.readFile(WG_DATA_FILE, function(err, obj) {
       nationData.lootBoost = data.lootBoost;
       nationData.highestRank = data.highestRank;
       wGuildNations.set(name, nationData);
-    })
+    });
   }
 });
 
@@ -326,6 +336,9 @@ app.get('/wg/points/add', function(req, res) {
             // determine how much WGP we should add
             var add = 0;
             switch (type) {
+              case "custom": // Custom WGP add
+                add = count;
+                break;
               case "standard": // Manual/Standard telegrams
                 add = 3 * count;
                 break;
@@ -370,14 +383,16 @@ app.get('/wg/points/add', function(req, res) {
             res.send('1');
           }
         }
+      } else {
+        res.status(403).send('0');
       }
     }).catch(function(error) {
       console.log("Error verifying token: ", error);
-      res.send('0');
+      res.status(403).send('0');
     });
-    return;
+  } else {
+    res.status(400).send('0');
   }
-  res.send('0');
 });
 
 app.get('/wg/points/get', function(req, res) {
@@ -395,7 +410,7 @@ app.get('/wg/member/add', function(req, res) {
       // are they authorized to add accounts 
       if (wGuildOfficers.includes(uid)) {
         wGuildNations.set(nation, new WGuildNationData(nation));
-        res.send('1');
+        res.status(202).send('1');
         // Announce a new member!
         nsNation(nation, ['name', 'flag'], function(data) {
           // Get friendly name and flag URL
@@ -412,14 +427,16 @@ app.get('/wg/member/add', function(req, res) {
               }
           });
         });
+      } else {
+        res.status(403).send('0');
       }
     }).catch(function(error) {
       console.log("Error verifying token: ", error);
-      res.send('0');
+      res.status(403).send('0');
     });
-    return;
+  } else {
+    res.status(400).send('0');
   }
-  res.send('0');
 });
 
 app.get('/wg/loot/roll', function(req, res) {
@@ -467,42 +484,51 @@ app.get('/wg/loot/roll', function(req, res) {
           nation.lootBoost = Math.random() <= 0.01; // if special
           // Notify admin Discord
           request({method: 'POST', uri: lootAccounts.announce.admin, json: true, body: {content: nation.name + ' received ' + (nation.lootBoost ? 'Special ' : '') + item}}, function(err, response, body) {
-            if (!err) {
+            if (err) {
+              res.status(500).send('0');
+            } else {
               // Give client loot info
               res.send({
                 tier: tier,
                 item: item,
                 special: nation.lootBoost
               });
-              // Announce special and/or exceedingly rare items
-              if (tier > 3 || nation.lootBoost) {
-                // Get friendly name and flag image
-                nsNation(member, ['name', 'flag'], function(data) {
-                  var nationName = data.get('name');
-                  var flagImg = data.get('flag');
-                  // Send to TVF Discord
-                  request({
-                      method: 'POST',
-                      uri: lootAccounts.announce.global,
-                      json: true, 
-                      body: {
-                        content: '**' + nationName + '** just received an exceedingly rare drop: _' + (special ? 'Special ' : '') + item + '_!!!',
-                        avatar_url: flagImg
-                      }
+              // Do not spoil drops in announcements
+              setTimeout(function() {
+                // Announce special and/or exceedingly rare items
+                if (tier > 3 || nation.lootBoost) {
+                  // Get friendly name and flag image
+                  nsNation(member, ['name', 'flag'], function(data) {
+                    var nationName = data.get('name');
+                    var flagImg = data.get('flag');
+                    // Send to TVF Discord
+                    request({
+                        method: 'POST',
+                        uri: lootAccounts.announce.global,
+                        json: true, 
+                        body: {
+                          content: '**' + nationName + '** just received an exceedingly rare drop: _' + (special ? 'Special ' : '') + item + '_!!!',
+                          avatar_url: flagImg
+                        }
+                    });
                   });
-                });
-              }
+                }
+              }, 10000);
             }
           });
+        } else {
+          res.status(403).send('0');
         }
+      } else {
+        res.status(403).send('0');  
       }
     }).catch(function(error) {
       console.log("Error verifying token: ", error);
-      res.send('0');
+      res.status(403).send('0');
     });
-    return;
+  } else {
+    res.status(400).send('0');
   }
-  res.send('0');
 });
 
 /* TODO
@@ -537,14 +563,16 @@ app.get('/wg/loot/inventory', function(req, res) {
           count: nation.lootboxes,
           special: nation.lootBoost
         });
+      } else {
+        res.status(403).send('0');
       }
     }).catch(function(error) {
       console.log("Error verifying token: ", error);
-      res.send('0');
+      res.status(403).send('0');
     });
-    return;
+  } else {
+    res.status(400).send('0');
   }
-  res.send('0');
 });
 
 app.get('/admin/save', function (req, res) {
@@ -578,18 +606,66 @@ app.get('/admin/save', function (req, res) {
         });
         // save data
         jsonfile.writeFile(WG_DATA_FILE, write, function(err) {
-          console.log('Failed saving data: ', err)
-          res.send('0')
+          if (err) {
+            console.log('Failed saving data: ', err)
+            res.status(403).send('0');
+          } else {
+            res.send('1');
+          }
         });
       } else {
-        res.send('0');
+        res.status(403).send('0');
       }
     }).catch(function(error) {
       console.log("Error verifying token: ", error);
-      res.send('0');
+      res.status(403).send('0');
     });
   } else {
-    res.send('0');
+    res.status(400).send('0');
+  }
+});
+
+app.get('/admin/daily', function(req, res) {
+  var token = req.cookies.token; // JWT
+  // are they authed
+  if (token) {
+    // decode their JWT
+    admin.auth().verifyIdToken(token).then(function(user) {
+      var uid = user.uid; // username
+      // are they authorized to save
+      if (wGuildOfficers.includes(uid)) {
+        updateDaily();
+      } else {
+        res.status(403).send('0');
+      }
+    }).catch(function(error) {
+      console.log("Error verifying token: ", error);
+      res.status(403).send('0');
+    });
+  } else {
+    res.status(400).send('0');
+  }
+});
+
+app.get('/admin/monthly', function(req, res) {
+  var token = req.cookies.token; // JWT
+  // are they authed
+  if (token) {
+    // decode their JWT
+    admin.auth().verifyIdToken(token).then(function(user) {
+      var uid = user.uid; // username
+      // are they authorized to save
+      if (wGuildOfficers.includes(uid)) {
+        updateMonthly();
+      } else {
+        res.status(403).send('0');
+      }
+    }).catch(function(error) {
+      console.log("Error verifying token: ", error);
+      res.status(403).send('0');
+    });
+  } else {
+    res.status(400).send('0');
   }
 });
 
