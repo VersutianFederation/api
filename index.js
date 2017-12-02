@@ -323,6 +323,7 @@ app.get('/wg/points/add', function(req, res) {
           count = 1;
           adding = true
         } else {
+          count = parseInt(count, 10);
           adding = count !== 0;
         }
         if (adding) {
