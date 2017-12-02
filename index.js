@@ -678,7 +678,7 @@ function load() {
 }
 
 function save() {
-  reload();
+  load();
   // save data
   jsonfile.writeFile(WG_DATA_FILE, write, function(err) {
     if (err) {
