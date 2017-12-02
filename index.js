@@ -662,11 +662,11 @@ var write = {};
 function save() {
   write = {};
   var a = [];
-  for (var nation of wGuildNations) {
+  for (var nation of wGuildNations.values()) {
     a.push(nation);
   }
   a.sort(function(a, b) {
-    return a.livePoints - b.livePoints;
+    return b.livePoints - a.livePoints;
   });
   wGuildNations = new Map();
   for (var nation of a) {
