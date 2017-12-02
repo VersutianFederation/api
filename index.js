@@ -654,7 +654,7 @@ app.listen(port, hostname);
 
 var write = {};
 
-function load() {
+function save() {
   write = {};
   wGuildNations.forEach(function (member, name) {
     // collect properties
@@ -675,10 +675,6 @@ function load() {
       }
     });
   });
-}
-
-function save() {
-  load();
   // save data
   jsonfile.writeFile(WG_DATA_FILE, write, function(err) {
     if (err) {
@@ -686,9 +682,6 @@ function save() {
     }
   });
 }
-
-// load data into write object
-save();
 
 // Bump Daily Rate for all members
 function updateDaily() {
