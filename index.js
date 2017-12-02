@@ -179,6 +179,7 @@ var POINTS_CAP = 10000;
 var WG_DATA_FILE = "/opt/data/wguild.json";
 
 var wGuildNations = new Map();
+var wGuildApplied = [];
 
 jsonfile.readFile(WG_DATA_FILE, function(err, obj) {
   if (err) {
@@ -450,6 +451,66 @@ app.get('/wg/member/add', function(req, res) {
   }
 });
 
+app.get('/wg/member/apply', function(req, res){ 
+  var token = req.cookies.token; // JWT
+  // are they authed
+  if (token) {
+    // verify JWT
+    admin.auth().verifyIdToken(token).then(function(user) {
+      var member = user.uid;
+      // are they a member and haven't applied already
+      if (!wGuildNations.has(member) && !wGuildApplied.includes(member)) {
+        request({
+          method: 'POST',
+          uri: lootAccounts.announce.admin,
+          json: true,
+          body: {content: member + ' wants to join. https:// api.versutian.site /wg/member/add?nation=' + member}
+        },
+        function(err, response, body) {
+          if (err) {
+            res.status(500).send('0');
+          } else {
+            res.send('1');
+          }
+        });
+      } else {
+        res.status(403).send('0');
+      }
+    }).catch(function(error) {
+      console.log("Error verifying token: ", error);
+      res.status(403).send('0');
+    });
+  } else {
+    res.status(400).send('0');
+  }
+});
+
+app.get('/wg/member/status', function(req, res) {
+  var token = req.cookies.token; // JWT
+  // are they authed
+  if (token) {
+    // verify JWT
+    admin.auth().verifyIdToken(token).then(function(user) {
+      var member = user.uid;
+      if (wGuildNations.has(member)) {
+        // are they a member
+        res.send('3');
+      } else if (wGuildApplied.includes(member)) {
+        // they've already applied
+        res.send('2');
+      } else {
+        // they have not applied
+        res.send('1');
+      }
+    }).catch(function(error) {
+      console.log("Error verifying token: ", error);
+      res.status(403).send('0');
+    });
+  } else {
+    res.status(400).send('0');
+  }
+});
+
 app.get('/wg/loot/roll', function(req, res) {
   var token = req.cookies.token; // JWT
   // are they authed
@@ -494,7 +555,13 @@ app.get('/wg/loot/roll', function(req, res) {
           var item = items[Math.floor(Math.random() * items.length)]; // what item in the tier
           nation.lootBoost = Math.random() <= 0.01; // if special
           // Notify admin Discord
-          request({method: 'POST', uri: lootAccounts.announce.admin, json: true, body: {content: nation.name + ' received ' + (nation.lootBoost ? 'Special ' : '') + item}}, function(err, response, body) {
+          request({
+              method: 'POST',
+              uri: lootAccounts.announce.admin,
+              json: true,
+              body: {content: nation.name + ' received ' + (nation.lootBoost ? 'Special ' : '') + item}
+          },
+          function(err, response, body) {
             if (err) {
               res.status(500).send('0');
             } else {
