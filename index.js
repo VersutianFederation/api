@@ -213,7 +213,7 @@ function WGuildNationData(name) {
   this.highestRank = 2; // Highest rank achieved by this nation
   // The current wGuild rank
   this.getRank = function() {
-    return Math.floor(points / 1000);
+    return Math.floor(this.points / 1000);
   };
   // Run every month to award lootboxes and update monthly rank
   this.bumpPoints = function() {
@@ -223,7 +223,7 @@ function WGuildNationData(name) {
       this.lootboxes += Math.floor(totalGain / 250);
     }
     // Track change in rank
-    var oldRank = getRank();
+    var oldRank = this.getRank();
     // Add net points gain to monthly rank
     this.points += totalGain;
     // Cap points
@@ -237,7 +237,7 @@ function WGuildNationData(name) {
     this.bonus = 0;
     this.rate = DAILY_RATE_CAP;
     // Get new rank
-    var rank = getRank();
+    var rank = this.getRank();
     // Rank changed
     if (oldRank !== rank) {
       if (rank > this.highestRank) {
@@ -688,7 +688,7 @@ function save() {
 }
 
 // load data into write object
-load();
+save();
 
 // Bump Daily Rate for all members
 function updateDaily() {
