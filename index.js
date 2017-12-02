@@ -257,7 +257,7 @@ function WGuildNationData(name) {
     this.gain += add;
     // Calculate bonus points for positive gains
     if (this.gain > 0) {
-      this.bonus = Math.round(gain * (((gain / 1000) / Math.sqrt((gain / 1000) + Math.pow(gain / 1000, 2)))));
+      this.bonus = Math.round(this.gain * (((this.gain / 1000) / Math.sqrt((this.gain / 1000) + Math.pow(this.gain / 1000, 2)))));
     } else {
       this.bonus = 0;
     }
