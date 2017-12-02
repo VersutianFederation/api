@@ -221,7 +221,7 @@ function WGuildNationData(name) {
     return Math.floor(this.points / 1000);
   };
   // Run every month to award lootboxes and update monthly rank
-  this.bumpPoints = function() {
+  this.updatePoints = function() {
     // Reward 1 lootbox per 250 points earned
     var totalGain = this.gain + this.bonus;
     if (totalGain > 0) {
@@ -688,17 +688,17 @@ function save() {
   });
 }
 
-// Bump Daily Rate for all members
+// Update Daily Rate for all members
 function updateDaily() {
   wGuildNations.forEach(function (member, name) {
-    member.bumpRate(); // bump daily rate
+    member.updateRate(); // update daily rate
   });
 }
 
 // Bump points for all members
 function updateMonthly() {
   wGuildNations.forEach(function (member) {
-    member.bumpPoints();
+    member.updatePoints();
   });
 }
 
