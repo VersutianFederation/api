@@ -421,6 +421,10 @@ app.get('/wg/member/add', function(req, res) {
       var uid = user.uid; // username
       // are they authorized to add accounts 
       if (wGuildOfficers.includes(uid)) {
+        // remove from applied list
+        if (wGuildApplied.includes(nation)) {
+          wGuildApplied.splice(wGuildApplied.indexOf(nation), 1) ;
+        }
         wGuildNations.set(nation, new WGuildNationData(nation));
         res.status(202).send('1');
         // Announce a new member!
