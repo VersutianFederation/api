@@ -669,9 +669,9 @@ function save() {
     return a.livePoints - b.livePoints;
   });
   wGuildNations = new Map();
-  a.forEach(function(nation) {
+  for (var nation of a) {
     wGuildNations.set(nation.name, nation);
-  });
+  }
   wGuildNations.forEach(function (member, name) {
     // collect properties
     Object.defineProperty(write, name, {
