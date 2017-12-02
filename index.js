@@ -379,9 +379,14 @@ app.get('/wg/points/add', function(req, res) {
               default:
                 break;
             }
-            // Add the points accordingly
-            member.addPoints(add);
-            res.send('1');
+            if (add === 0) {
+              // did not specify type
+              res.status(400).send('1');
+            } else {
+              // Add the points accordingly
+              member.addPoints(add);
+              res.send('1');
+            }
           }
         }
       } else {
@@ -649,7 +654,7 @@ app.listen(port, hostname);
 
 var write = {};
 
-function save() {
+function load() {
   write = {};
   wGuildNations.forEach(function (member, name) {
     // collect properties
@@ -670,6 +675,10 @@ function save() {
       }
     });
   });
+}
+
+function save() {
+  reload();
   // save data
   jsonfile.writeFile(WG_DATA_FILE, write, function(err) {
     if (err) {
@@ -677,6 +686,9 @@ function save() {
     }
   });
 }
+
+// load data into write object
+load();
 
 // Bump Daily Rate for all members
 function updateDaily() {
