@@ -661,6 +661,17 @@ var write = {};
 
 function save() {
   write = {};
+  var a = [];
+  for (var nation of wGuildNations) {
+    a.push(nation);
+  }
+  a.sort(function(a, b) {
+    return a.livePoints - b.livePoints;
+  });
+  wGuildNations = new Map();
+  a.forEach(function(nation) {
+    wGuildNations.set(nation.name, nation);
+  });
   wGuildNations.forEach(function (member, name) {
     // collect properties
     Object.defineProperty(write, name, {
