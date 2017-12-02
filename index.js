@@ -585,35 +585,8 @@ app.get('/admin/save', function (req, res) {
       var uid = user.uid; // username
       // are they authorized to save
       if (wGuildOfficers.includes(uid)) {
-        write = {};
-        wGuildNations.forEach(function (member, name) {
-          // collect properties
-          Object.defineProperty(write, name, {
-            configurable: true,
-            writable: true,
-            enumerable: true,
-            value: {
-              points: member.points,
-              livePoints: member.livePoints,
-              gain: member.gain,
-              bonus: member.bonus,
-              rate: member.rate,
-              lootboxes: member.lootboxes,
-              freeLootbox: member.freeLootbox,
-              lootBoost: member.lootAccounts,
-              highestRank: member.highestRank
-            }
-          });
-        });
-        // save data
-        jsonfile.writeFile(WG_DATA_FILE, write, function(err) {
-          if (err) {
-            console.log('Failed saving data: ', err)
-            res.status(403).send('0');
-          } else {
-            res.send('1');
-          }
-        });
+        save();
+        res.status(202).send('1');
       } else {
         res.status(403).send('0');
       }
@@ -636,6 +609,7 @@ app.get('/admin/daily', function(req, res) {
       // are they authorized to save
       if (wGuildOfficers.includes(uid)) {
         updateDaily();
+        res.status(202).send('1');
       } else {
         res.status(403).send('0');
       }
@@ -658,6 +632,7 @@ app.get('/admin/monthly', function(req, res) {
       // are they authorized to save
       if (wGuildOfficers.includes(uid)) {
         updateMonthly();
+        res.status(202).send('1');
       } else {
         res.status(403).send('0');
       }
@@ -674,11 +649,9 @@ app.listen(port, hostname);
 
 var write = {};
 
-// Bump Daily Rate for all members and save
-function updateDaily() {
+function save() {
   write = {};
   wGuildNations.forEach(function (member, name) {
-    member.bumpRate(); // bump daily rate
     // collect properties
     Object.defineProperty(write, name, {
       configurable: true,
@@ -699,7 +672,16 @@ function updateDaily() {
   });
   // save data
   jsonfile.writeFile(WG_DATA_FILE, write, function(err) {
-    console.log('Failed saving data: ', err)
+    if (err) {
+      console.log('Failed saving data: ', err)
+    }
+  });
+}
+
+// Bump Daily Rate for all members
+function updateDaily() {
+  wGuildNations.forEach(function (member, name) {
+    member.bumpRate(); // bump daily rate
   });
 }
 
@@ -709,6 +691,11 @@ function updateMonthly() {
     member.bumpPoints();
   });
 }
+
+// Run hourly, but 1 minute after daily update
+var hourly = schedule.scheduleJob('2 * * * *', function() {
+  save();
+});
 
 // Run at midnight, but 1 minute after monthly update
 var daily = schedule.scheduleJob('1 0 * * *', function() {
