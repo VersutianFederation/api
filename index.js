@@ -288,7 +288,7 @@ function WGuildNationData(name) {
   // Apply and decay daily rate at the start of each day
   this.updateRate = function() {
     // Apply daily rate
-    addPoints(this.rate);
+    this.addPoints(this.rate);
     // Decrease the rate by 1, to a minimum of 0
     if (this.rate > 0) {
       this.rate--;
