@@ -673,22 +673,26 @@ function save() {
     wGuildNations.set(nation.name, nation);
   }
   wGuildNations.forEach(function (member, name) {
-    // collect properties
-    Object.defineProperty(write, name, {
-      configurable: true,
-      writable: true,
-      enumerable: true,
-      value: {
-        points: member.points,
-        livePoints: member.livePoints,
-        gain: member.gain,
-        bonus: member.bonus,
-        rate: member.rate,
-        lootboxes: member.lootboxes,
-        freeLootbox: member.freeLootbox,
-        lootBoost: member.lootAccounts,
-        highestRank: member.highestRank
-      }
+    nsNation(name, ['flag', 'name'], function(data) {
+      // collect properties
+      Object.defineProperty(write, name, {
+        configurable: true,
+        writable: true,
+        enumerable: true,
+        value: {
+          points: member.points,
+          livePoints: member.livePoints,
+          gain: member.gain,
+          bonus: member.bonus,
+          rate: member.rate,
+          lootboxes: member.lootboxes,
+          freeLootbox: member.freeLootbox,
+          lootBoost: member.lootAccounts,
+          highestRank: member.highestRank,
+          displayName: data.get('name'),
+          flagImg: data.get('flag')
+        }
+      });
     });
   });
   // save data
