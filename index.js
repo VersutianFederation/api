@@ -337,7 +337,7 @@ app.get('/wg/points/add', function(req, res) {
           // specifying the type is required
           if (type) {
             // refresh the daily WGP on applicable types
-            if (count > 0 && type === "welcome" || type === "manual") {
+            if (count > 0 && type === "welcome" || type === "standard") {
               member.bumpRate();
             }
             // determine how much WGP we should add
@@ -387,7 +387,7 @@ app.get('/wg/points/add', function(req, res) {
             }
             if (add === 0) {
               // did not specify type
-              res.status(400).send('1');
+              res.status(400).send('0');
             } else {
               // Add the points accordingly
               member.addPoints(add);
