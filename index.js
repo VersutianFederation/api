@@ -376,6 +376,9 @@ app.get('/wg/points/add', function(req, res) {
               case "candidate": // Participation in election race
                 add = 50 * count;
                 break;
+              case "elected": // Won in election
+                add = 100 * count;
+                break;
               case "fail": // Improper onboarding process
                 add = -30 * count;
                 break;
