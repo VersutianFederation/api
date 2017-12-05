@@ -205,6 +205,29 @@ jsonfile.readFile(WG_DATA_FILE, function(err, obj) {
   }
 });
 
+// Item data
+function WGuildItemData(name, type, rewardCallback) {
+  this.name = name; // Display name of the item
+  this.type = type; // Equip slot or type for non cosmetics
+  this.rewardCallback = rewardCallback; // For rewarding WGP or by default, adding it to player's inventory
+}
+
+// Lootbox data
+function WGuildBoxData(name) {
+  this.name = name;
+  this.odds = [0.65, 0.85, 0.95, 0.98]; // Odds array, must match 
+  this.contents = new Map();
+  this.tiers = ['Common', 'Uncommon', 'Rare', 'Elite', 'Ambassador Select'];
+  this.refreshTiers = function() {
+    this.tiers.forEach(function(value, index) {
+      this.contents.set(index, []);
+    });
+  }
+  this.addContents = function(tier, item) {
+    this.contents.get(tier).push(item);
+  }
+}
+
 // Nation data for wGuild
 function WGuildNationData(name) {
   this.name = name; // Name of nation
