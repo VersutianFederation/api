@@ -205,6 +205,29 @@ jsonfile.readFile(WG_DATA_FILE, function(err, obj) {
   }
 });
 
+// Item data
+function WGuildItemData(name, type, rewardCallback) {
+  this.name = name; // Display name of the item
+  this.type = type; // Equip slot or type for non cosmetics
+  this.rewardCallback = rewardCallback; // For rewarding WGP or by default, adding it to player's inventory
+}
+
+// Lootbox data
+function WGuildBoxData(name) {
+  this.name = name;
+  this.odds = [0.65, 0.85, 0.95, 0.98]; // Odds array, must match 
+  this.contents = new Map();
+  this.tiers = ['Common', 'Uncommon', 'Rare', 'Elite', 'Ambassador Select'];
+  this.refreshTiers = function() {
+    this.tiers.forEach(function(value, index) {
+      this.contents.set(index, []);
+    });
+  }
+  this.addContents = function(tier, item) {
+    this.contents.get(tier).push(item);
+  }
+}
+
 // Nation data for wGuild
 function WGuildNationData(name) {
   this.name = name; // Name of nation
@@ -337,7 +360,7 @@ app.get('/wg/points/add', function(req, res) {
           // specifying the type is required
           if (type) {
             // refresh the daily WGP on applicable types
-            if (count > 0 && type === "welcome" || type === "manual") {
+            if (count > 0 && type === "welcome" || type === "standard") {
               member.bumpRate();
             }
             // determine how much WGP we should add
@@ -387,7 +410,7 @@ app.get('/wg/points/add', function(req, res) {
             }
             if (add === 0) {
               // did not specify type
-              res.status(400).send('1');
+              res.status(400).send('0');
             } else {
               // Add the points accordingly
               member.addPoints(add);
