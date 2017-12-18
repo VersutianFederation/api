@@ -408,7 +408,7 @@ app.get('/wg/points/add', function(req, res) {
 });
 
 app.get('/wg/points/get', function(req, res) {
-  res.json(write);
+  res.json(leaderboard);
 });
 
 app.get('/wg/member/add', function(req, res) {
@@ -728,10 +728,11 @@ app.get('/admin/monthly', function(req, res) {
 
 app.listen(port, hostname);
 
-var write = {};
+var db = {};
+var leaderboard = {};
 
 function save() {
-  write = {};
+  db = {};
   var a = [];
   for (var nation of wGuildNations.values()) {
     a.push(nation);
@@ -746,7 +747,7 @@ function save() {
   wGuildNations.forEach(function (member, name) {
     nsNation(name, ['flag', 'name'], function(data) {
       // collect properties
-      Object.defineProperty(write, name, {
+      Object.defineProperty(db, name, {
         configurable: true,
         writable: true,
         enumerable: true,
@@ -759,6 +760,20 @@ function save() {
           lootboxes: member.lootboxes,
           freeLootbox: member.freeLootbox,
           lootBoost: member.lootAccounts,
+          highestRank: member.highestRank
+        }
+      });
+      Object.defineProperty(leaderboard, name, {
+        configurable: true,
+        writable: true,
+        enumerable: true,
+        value: {
+          points: member.points,
+          livePoints: member.livePoints,
+          gain: member.gain,
+          bonus: member.bonus,
+          rate: member.rate,
+          equipment: member.equipment,
           highestRank: member.highestRank,
           displayName: data.get('name'),
           flagImg: data.get('flag')
@@ -767,12 +782,15 @@ function save() {
     });
   });
   // save data
-  jsonfile.writeFile(WG_DATA_FILE, write, function(err) {
+  jsonfile.writeFile(WG_DATA_FILE, db, function(err) {
     if (err) {
       console.log('Failed saving data: ', err)
     }
   });
 }
+
+save();
+save();
 
 // Update Daily Rate for all members
 function updateDaily() {
