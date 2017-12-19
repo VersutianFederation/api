@@ -205,28 +205,118 @@ jsonfile.readFile(WG_DATA_FILE, function(err, obj) {
   }
 });
 
-// Item data
+// Item inventory data
 function WGuildItemData(name, type, rewardCallback) {
   this.name = name; // Display name of the item
   this.type = type; // Equip slot or type for non cosmetics
-  this.rewardCallback = rewardCallback; // For rewarding WGP or by default, adding it to player's inventory
+  this.rewardCallback = rewardCallback; // For rewarding WGP or adding it to player's inventory
+}
+
+// Item economy data
+function WGuildBoxDropData(item, box, tier, special) {
+  this.item = item;
+  this.box = box;
+  this.tier = tier;
+  this.special = special;
 }
 
 // Lootbox data
 function WGuildBoxData(name) {
   this.name = name;
+  this.cost = 100;
   this.odds = [0.65, 0.85, 0.95, 0.98]; // Odds array, must match 
   this.contents = new Map();
   this.tiers = ['Common', 'Uncommon', 'Rare', 'Elite', 'Ambassador Select'];
   this.refreshTiers = function() {
-    this.tiers.forEach(function(value, index) {
-      this.contents.set(index, []);
+    // Fill the map
+    this.tiers.forEach(function(value) {
+      this.contents.set(value, []);
     });
   }
   this.addContents = function(tier, item) {
+    if (typeof(tier) === "number") {
+      tier = tiers[tier];
+    }
     this.contents.get(tier).push(item);
   }
+  this.open = function(nation) {
+    nation.openLootbox(cost);
+    return roll(nation);
+  }
+  this.roll = function(nation) {
+    // Roll the numbers
+    var tierRoll = Math.random(); // what tier 
+    var odds = this.odds.slice(0); // odds
+    if (nation.lootBoost) {
+      // Odds are boosted, expand non-common tier chance by 5%
+      odds.forEach(function(item, index) {
+        odds[index] -= (0.05 * (odds.length - index));
+      });
+      // We've consumed this boost
+      nation.lootBoost = false;
+    }
+    var tier; // loot tier
+    var items; // possible items in tier
+    tiers.forEach(function(value, index) {
+      if (tierRoll <= odds[index] || index === odds.length) {
+        tier = index + 1;
+        return;
+      }
+    });
+    items = contents.get(tiers[tier - 1]);
+    var item = items[Math.floor(Math.random() * items.length)]; // what item in the tier
+    nation.lootBoost = Math.random() <= 0.01; // if special
+    // Notify admin Discord
+    request({
+        method: 'POST',
+        uri: lootAccounts.announce.admin,
+        json: true,
+        body: {content: nation.name + ' received ' + (nation.lootBoost ? 'Special ' : '') + item}
+    },
+    function(err, response, body) {
+      // Do not spoil drops in announcements
+      setTimeout(function() {
+        // Announce special and/or exceedingly rare items
+        if (tier > 3 || nation.lootBoost) {
+          // Get friendly name and flag image
+          nsNation(member, ['name', 'flag'], function(data) {
+            var nationName = data.get('name');
+            var flagImg = data.get('flag');
+            // Send to TVF Discord
+            request({
+                method: 'POST',
+                uri: lootAccounts.announce.global,
+                json: true, 
+                body: {
+                  content: '**' + nationName + '** just received an exceedingly rare drop: _' + (special ? 'Special ' : '') + item + '_!!!',
+                  avatar_url: flagImg
+                }
+            });
+          });
+        }
+      }, 10000);
+      return new WGuildBoxDropData(item, this, tier, nation.lootBoost);
+    });
+  }
 }
+
+// Lootboxes
+var firstBox = new WGuildBoxData("Lootbox Prime");
+firstBox.refreshTiers();
+firstBox.addContents(0, ['115 WGP', 'Gray Background', 'Lime Background', 'Brown Background']);
+firstBox.addContents(1, ['Baseball Cap', 'Slate Gradient', 'Purple Background', 'Pink Background', 'Cyan Background', '1000 Stamps', '200 WGP']);
+firstBox.addContents(2, ['Versutian Gradient Background', 'Top Hat', 'Soot Showers Effect', '500 WGP']);
+firstBox.addContents(3, ['Flag Wave', 'Rainbow Gradient Background', 'Ray of Hope Effect', "Man's Not Hot Sound", '630 WGP', '2500 Stamps']);
+firstBox.addContents(4, ['Pulsing Versutian Gradient Background', 'Crown', "Mom's Spaghetti Sound", 'Firey Passion Effect', '5000 Stamps', '1000 WGP']);
+var winterLoot2017T1 = new WGuildBoxData("Winter 2017 Loot Tier I");
+winterLoot2017T1.tiers = ["Frosty", "Festive", "Merry", "Jolly", "Miracle"];
+winterLoot2017T1.refreshTiers();
+var winterLoot2017T2 = new WGuildBoxData("Winter 2017 Loot Tier II");
+winterLoot2017T2.tiers = ["Frosty", "Festive", "Merry", "Jolly", "Miracle"]
+winterLoot2017T2.refreshTiers();
+var winterLoot2017T3 = new WGuildBoxData("Winter 2017 Loot Tier III");
+winterLoot2017T3.tiers = ["Frosty", "Festive", "Merry", "Jolly", "Miracle"]
+winterLoot2017T3.refreshTiers();
 
 // Nation data for wGuild
 function WGuildNationData(name) {
@@ -236,10 +326,12 @@ function WGuildNationData(name) {
   this.gain = 0; // Base points earned monthly
   this.bonus = 0; // Additional bonus points
   this.rate = DAILY_RATE_CAP; // Daily rate
-  this.lootboxes = 1; // Number of lootboxes (start with free lootbox)
-  this.freeLootbox = true; // Start with complimentary free lootbox
+  this.rateCap = DAILY_RATE_CAP; // Daily rate cap
   this.lootBoost = false; // Loot drop boost from special item
   this.highestRank = 2; // Highest rank achieved by this nation
+  this.inventory = [];
+  this.storage = [];
+  this.equipment = new WGuildEquipment();
   // The current wGuild rank
   this.getRank = function() {
     return Math.floor(this.points / 1000);
@@ -304,8 +396,8 @@ function WGuildNationData(name) {
     // Give daily rate according to current rate
     this.rate = Math.max(1, this.rate) * 2;
     // Cap daily rate
-    if (this.rate > DAILY_RATE_CAP) {
-      this.rate = DAILY_RATE_CAP;
+    if (this.rate > this.rateCap) {
+      this.rate = this.rateCap;
     }
   };
   // Apply and decay daily rate at the start of each day
@@ -318,19 +410,19 @@ function WGuildNationData(name) {
     }
   };
   // Open a lootbox if there are any
-  this.openLootbox = function() {
-    if (this.lootboxes > 0) {
-      this.lootboxes--;
-      if (this.freeLootbox) {
-        this.freeLootbox = false;
-      } else {
-        this.points -= 100;
-        this.livePoints -= 100;
-      }
-      return true;
-    }
-    return false;
+  this.openLootbox = function(cost) {
+    this.points -= cost;
+    this.livePoints -= cost;
   };
+}
+
+function WGuildEquipment() {
+  this.sound = {};
+  this.background = {};
+  this.glow = {};
+  this.hat = {};
+  this.flag = {};
+  this.overlay = {};
 }
 
 app.get('/wg/points/add', function(req, res) {
@@ -360,7 +452,7 @@ app.get('/wg/points/add', function(req, res) {
           // specifying the type is required
           if (type) {
             // refresh the daily WGP on applicable types
-            if (count > 0 && type === "welcome" || type === "standard") {
+            if (count > 0 && (type === "welcome" || type === "standard")) {
               member.bumpRate();
             }
             // determine how much WGP we should add
@@ -550,77 +642,7 @@ app.get('/wg/loot/roll', function(req, res) {
         var nation = wGuildNations.get(member);
         // if they have a lootbox, open it
         if (nation.openLootbox()) {
-          // Roll the numbers
-          var tierRoll = Math.random(); // what tier 
-          var odds = [0.65, 0.85, 0.95, 0.98]; // default odds
-          if (nation.lootBoost) {
-            // Odds are boosted, expand non-common tier chance by 5%
-            odds.forEach(function(item, index) {
-              odds[index] -= (0.05 * (odds.length - index));
-            });
-            // We've consumed this boost
-            nation.lootBoost = false;
-          }
-          var tier; // loot tier
-          var items; // possible items in tier
-          if (tierRoll <= odds[0]) {
-            tier = 1; // Common
-            items = ['115 WGP', 'Gray Background', 'Lime Background', 'Brown Background'];
-          } else if (tierRoll <= odds[1]) {
-            tier = 2; // Uncommon
-            items = ['Baseball Cap', 'Slate Gradient', 'Purple Background', 'Pink Background', 'Cyan Background', '1000 Stamps', '200 WGP'];
-          } else if (tierRoll <= odds[2]) {
-            tier = 3; // Rare
-            items = ['Versutian Gradient Background', 'Top Hat', 'Soot Showers Effect', '500 WGP'];
-          } else if (tierRoll <= odds[3]) {
-            tier = 4; // Elite
-            items = ['Flag Wave', 'Rainbow Gradient Background', 'Ray of Hope Effect', "Man's Not Hot Sound", '630 WGP', '2500 Stamps'];
-          } else {
-            tier = 5; // Ambassador Select
-            items = ['Pulsing Versutian Gradient Background', 'Crown', "Mom's Spaghetti Sound", 'Firey Passion Effect', '5000 Stamps', '1000 WGP'];
-          }
-          var item = items[Math.floor(Math.random() * items.length)]; // what item in the tier
-          nation.lootBoost = Math.random() <= 0.01; // if special
-          // Notify admin Discord
-          request({
-              method: 'POST',
-              uri: lootAccounts.announce.admin,
-              json: true,
-              body: {content: nation.name + ' received ' + (nation.lootBoost ? 'Special ' : '') + item}
-          },
-          function(err, response, body) {
-            if (err) {
-              res.status(500).send('0');
-            } else {
-              // Give client loot info
-              res.send({
-                tier: tier,
-                item: item,
-                special: nation.lootBoost
-              });
-              // Do not spoil drops in announcements
-              setTimeout(function() {
-                // Announce special and/or exceedingly rare items
-                if (tier > 3 || nation.lootBoost) {
-                  // Get friendly name and flag image
-                  nsNation(member, ['name', 'flag'], function(data) {
-                    var nationName = data.get('name');
-                    var flagImg = data.get('flag');
-                    // Send to TVF Discord
-                    request({
-                        method: 'POST',
-                        uri: lootAccounts.announce.global,
-                        json: true, 
-                        body: {
-                          content: '**' + nationName + '** just received an exceedingly rare drop: _' + (special ? 'Special ' : '') + item + '_!!!',
-                          avatar_url: flagImg
-                        }
-                    });
-                  });
-                }
-              }, 10000);
-            }
-          });
+
         } else {
           res.status(403).send('0');
         }
