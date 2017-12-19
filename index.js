@@ -206,11 +206,70 @@ jsonfile.readFile(WG_DATA_FILE, function(err, obj) {
 });
 
 // Item inventory data
-function WGuildItemData(name, type, rewardCallback) {
+function WGuildItem(name, type, rewardCallback) {
   this.name = name; // Display name of the item
   this.type = type; // Equip slot or type for non cosmetics
   this.rewardCallback = rewardCallback; // For rewarding WGP or adding it to player's inventory
 }
+
+// Reward callback helpers
+// WGP
+function rewardWGP(nation, amount) {
+  nation.addPoints(amount);
+}
+
+// Cosmetics
+function addToInventory(nation, drop) {
+  if (drop.item.type === "lootbox") {
+    nation.storage.push(drop);
+  } else if (drop.item.type.startsWith("cosmetic")) {
+    nation.inventory.push(drop);
+  }
+}
+
+// Items
+// WGP
+var pointsLow = new WGuildItem("115 WGP", "points", function(nation) {
+  rewardWGP(nation, 115);
+});
+var pointsMedium = new WGuildItem("115 WGP", "points", function(nation) {
+  rewardWGP(nation, 200);
+});
+var pointsHigh = new WGuildItem("115 WGP", "points", function(nation) {
+  rewardWGP(nation, 500);
+});
+var pointsHigher = new WGuildItem("115 WGP", "points", function(nation) {
+  rewardWGP(nation, 630);
+});
+var pointsHigher = new WGuildItem("115 WGP", "points", function(nation) {
+  rewardWGP(nation, 1000);
+});
+var pointsHigherest = new WGuildItem("115 WGP", "points", function(nation) {
+  rewardWGP(nation, 5000);
+});
+
+// Stamps
+var stampsLow = new WGuildItem("1000 Stamps", "stamps", function() {});
+var stampsMedium = new WGuildItem("2500 Stamps", "stamps", function() {});
+var stampsHigh = new WGuildItem("5000 Stamps", "stamps", function() {});
+
+// Sounds
+var mansNotHot = new WGuildItem("Man's Not Hot Sound", "cosmetic.sound", function(nation, drop) {
+  addToInventory(nation, drop);
+});
+var momsSpaghetti = new WGuildItem("Mom's Spaghetti Sound", "cosmetic.sound", function(nation, drop) {
+  addToInventory(nation, drop);
+});
+
+// Backgrounds
+var grayBackground = new WGuildItem("Gray Background", "cosmetic.background", function(nation, drop) {
+  addToInventory(nation, drop);
+});
+var limeBackground = new WGuildItem("Lime Background", "cosmetic.background", function() {
+
+});
+
+// Effects
 
 // Item economy data
 function WGuildBoxDropData(item, box, tier, special) {
@@ -326,7 +385,7 @@ function WGuildNationData(name) {
   this.gain = 0; // Base points earned monthly
   this.bonus = 0; // Additional bonus points
   this.rate = DAILY_RATE_CAP; // Daily rate
-  this.rateCap = DAILY_RATE_CAP; // Daily rate cap
+  this.rateCap = DAILY_RATE_CAP; // User specific daily rate cap
   this.lootBoost = false; // Loot drop boost from special item
   this.highestRank = 2; // Highest rank achieved by this nation
   this.inventory = [];
@@ -583,7 +642,7 @@ app.get('/wg/member/apply', function(req, res){
           method: 'POST',
           uri: lootAccounts.announce.admin,
           json: true,
-          body: {content: member + ' wants to join. https:// api.versutian.site /wg/member/add?nation=' + member}
+          body: {content: member + ' wants to join. https:// api.versu tian.site/wg/member/add?nation=' + member}
         },
         function(err, response, body) {
           if (err) {
@@ -824,13 +883,13 @@ function save() {
           flagImg: data.get('flag')
         }
       });
+      // save data
+      jsonfile.writeFile(WG_DATA_FILE, db, function(err) {
+        if (err) {
+          console.log('Failed saving data: ', err)
+        }
+      });
     });
-  });
-  // save data
-  jsonfile.writeFile(WG_DATA_FILE, db, function(err) {
-    if (err) {
-      console.log('Failed saving data: ', err)
-    }
   });
 }
 
