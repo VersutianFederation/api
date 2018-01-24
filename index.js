@@ -168,7 +168,7 @@ app.get('/auth/clear', function(req, res) {
 });
 
 // Nations allowed to do administrative actions for wGuild
-var wGuildOfficers = ['humantus', 'akohos'];
+var wGuildOfficers = ['humantus', 'akohos', 'central_courelli'];
 
 // Constants
 var DAILY_RATE_CAP = 5;
