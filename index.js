@@ -478,6 +478,30 @@ app.get('/wg/member/add', function(req, res) {
   }
 });
 
+app.get('/wg/member/remove', function(req, res) {
+  var nation = req.query.nation; // Nation getting removed
+  var token = req.cookies.token; // JWT
+  // are they authed
+  if (nation && token) {
+    // decode their JWT
+    admin.auth().verifyIdToken(token).then(function(user) {
+      var uid = user.uid; // username
+      // are they authorized to remove accounts 
+      if (wGuildOfficers.includes(uid)) {
+        wGuildNations.delete(nation);
+        res.status(202).send('1');
+      } else {
+        res.status(403).send('0');
+      }
+    }).catch(function(error) {
+      console.log("Error verifying token: ", error);
+      res.status(403).send('0');
+    });
+  } else {
+    res.status(400).send('0');
+  }
+});
+
 app.get('/wg/member/apply', function(req, res){ 
   var token = req.cookies.token; // JWT
   // are they authed
