@@ -177,6 +177,7 @@ var POINTS_FLOOR = 1;
 var POINTS_CAP = 10000;
 
 var WG_DATA_FILE = "/opt/data/wguild.json";
+var WG_VALUES_FILE = "/opt/data/values.json";
 
 var wGuildNations = new Map();
 var wGuildApplied = [];
@@ -205,6 +206,17 @@ jsonfile.readFile(WG_DATA_FILE, function(err, obj) {
   }
 });
 
+jsonfile.readFile(WG_VALUES_FILE, function(err, obj) {
+  if (err) {
+    console.log('Error reading WG values: ', err);
+    process.exit(1);
+  } else {
+    Object.entries(obj).forEach(function (type) {
+      wgValues.set(type[0], type[1].points);
+    })
+  }
+})
+
 // Item data
 function WGuildItemData(name, type, rewardCallback) {
   this.name = name; // Display name of the item
@@ -215,7 +227,7 @@ function WGuildItemData(name, type, rewardCallback) {
 // Lootbox data
 function WGuildBoxData(name) {
   this.name = name;
-  this.odds = [0.65, 0.85, 0.95, 0.98]; // Odds array, must match 
+  this.odds = [0.65, 0.85, 0.95, 0.98]; // Odds array, must match
   this.contents = new Map();
   this.tiers = ['Common', 'Uncommon', 'Rare', 'Elite', 'Ambassador Select'];
   this.refreshTiers = function() {
@@ -271,7 +283,7 @@ function WGuildNationData(name) {
     if (oldRank !== rank) {
       if (rank > this.highestRank) {
         this.highestRank = rank;
-        return 2; // achieved a new higher rank (notify all) 
+        return 2; // achieved a new higher rank (notify all)
       } else if (rank === 1) {
         return 2; // got demoted (notify all)
       } else {
@@ -364,50 +376,7 @@ app.get('/wg/points/add', function(req, res) {
               member.bumpRate();
             }
             // determine how much WGP we should add
-            var add = 0;
-            switch (type) {
-              case "custom": // Custom WGP add
-                add = count;
-                break;
-              case "standard": // Manual/Standard telegrams
-                add = 3 * count;
-                break;
-              case "mass": // Mass Telegram per 100 stamps
-                add = 4 * count;
-                break;
-              case "api": // Recruitment API per 1 hour
-                add = 2 * count;
-                break;
-              case "welcome": // Manual welcome telegram
-                add = 5 * count;
-                break;
-              case "join": // Referral
-                add = 8 * count;
-                break;
-              case "citizen": // Citizen approval
-                add = 12 * count;
-                break;
-              case "discord": // Discord referral
-                add = 14 * count;
-                break;
-              case "roleplayer": // Roleplay referral
-                add = 25 * count;
-                break;
-              case "vote": // Participation in election vote
-                add = 35 * count;
-                break;
-              case "candidate": // Participation in election race
-                add = 50 * count;
-                break;
-              case "fail": // Improper onboarding process
-                add = -30 * count;
-                break;
-              case "abuse": // Abuse of privileges
-                add = -2000 * count;
-                break;
-              default:
-                break;
-            }
+            var add = add * getPointValue(type);
             if (add === 0) {
               // did not specify type
               res.status(400).send('0');
@@ -442,7 +411,7 @@ app.get('/wg/member/add', function(req, res) {
     // decode their JWT
     admin.auth().verifyIdToken(token).then(function(user) {
       var uid = user.uid; // username
-      // are they authorized to add accounts 
+      // are they authorized to add accounts
       if (wGuildOfficers.includes(uid)) {
         // remove from applied list
         if (wGuildApplied.includes(nation)) {
@@ -459,7 +428,7 @@ app.get('/wg/member/add', function(req, res) {
           request({
               method: 'POST',
               uri: lootAccounts.announce.global,
-              json: true, 
+              json: true,
               body: {
                 content: '**' + nationName + "** just joined the Welcomers' Guild!",
                 avatar_url: flagImg
@@ -486,7 +455,7 @@ app.get('/wg/member/remove', function(req, res) {
     // decode their JWT
     admin.auth().verifyIdToken(token).then(function(user) {
       var uid = user.uid; // username
-      // are they authorized to remove accounts 
+      // are they authorized to remove accounts
       if (wGuildOfficers.includes(uid)) {
         wGuildNations.delete(nation);
         res.status(202).send('1');
@@ -502,7 +471,7 @@ app.get('/wg/member/remove', function(req, res) {
   }
 });
 
-app.get('/wg/member/apply', function(req, res){ 
+app.get('/wg/member/apply', function(req, res){
   var token = req.cookies.token; // JWT
   // are they authed
   if (token) {
@@ -562,6 +531,73 @@ app.get('/wg/member/status', function(req, res) {
   }
 });
 
+var wgValues = new Map();
+
+app.get('/wg/values', function(req, res) {
+  var token = req.cookies.token; // JWT
+  var type = req.query.type; // Type queried
+  var set = req.query.value; // Value set
+  // are they authed
+  if (token && type) {
+    // decode their JWT
+    admin.auth().verifyIdToken(token).then(function(user) {
+      var uid = user.uid; // username
+      // are they authorized to see point values
+      if (wGuildOfficers.includes(uid)) {
+        if (set) {
+          wgValues.set(type, set);
+        }
+        res.send(getPointValue(type));
+      } else {
+        res.status(403).send('0');
+      }
+    }).catch(function(error) {
+      console.log("Error verifying token: ", error);
+      res.status(403).send('0');
+    });
+  } else {
+    res.status(400).send('0');
+  }
+});
+
+function getPointValue(type) {
+  if (wgValues.has(type)) {
+    return wgValues.get(type);
+  } else {
+    return 0;
+  }
+}
+
+app.get('/wg/loot/add', function(req, res){
+  var token = req.cookies.token; // JWT
+  var nation = req.query.nation; // Nation receiving lootboxes
+  var count = req.query.count; // Number of lootboxes
+  // are they authed
+  if (token && nation) {
+    // decode their JWT
+    admin.auth().verifyIdToken(token).then(function(user) {
+      var uid = user.uid; // username
+      // are they authorized to see point values
+      if (wGuildOfficers.includes(uid)) {
+        if (wGuildNations.has(member)) {
+          var recipient = wGuildNations.get(member);
+          if (!count) {
+            count = 1;
+          }
+          recipient.lootboxes += count;
+        }
+      } else {
+        res.status(403).send('0');
+      }
+    }).catch(function(error) {
+      console.log("Error verifying token: ", error);
+      res.status(403).send('0');
+    });
+  } else {
+    res.status(400).send('0');
+  }
+});
+
 app.get('/wg/loot/roll', function(req, res) {
   var token = req.cookies.token; // JWT
   // are they authed
@@ -575,7 +611,7 @@ app.get('/wg/loot/roll', function(req, res) {
         // if they have a lootbox, open it
         if (nation.openLootbox()) {
           // Roll the numbers
-          var tierRoll = Math.random(); // what tier 
+          var tierRoll = Math.random(); // what tier
           var odds = [0.65, 0.85, 0.95, 0.98]; // default odds
           if (nation.lootBoost) {
             // Odds are boosted, expand non-common tier chance by 5%
@@ -634,7 +670,7 @@ app.get('/wg/loot/roll', function(req, res) {
                     request({
                         method: 'POST',
                         uri: lootAccounts.announce.global,
-                        json: true, 
+                        json: true,
                         body: {
                           content: '**' + nationName + '** just received an exceedingly rare drop: _' + (special ? 'Special ' : '') + item + '_!!!',
                           avatar_url: flagImg
@@ -649,7 +685,7 @@ app.get('/wg/loot/roll', function(req, res) {
           res.status(403).send('0');
         }
       } else {
-        res.status(403).send('0');  
+        res.status(403).send('0');
       }
     }).catch(function(error) {
       console.log("Error verifying token: ", error);
@@ -816,14 +852,31 @@ function save() {
   // save data
   jsonfile.writeFile(WG_DATA_FILE, write, function(err) {
     if (err) {
-      console.log('Failed saving data: ', err)
+      console.log('Failed saving data: ', err);
     }
   });
+  var values = {};
+  wgValues.forEach(function (p, type) {
+    Object.defineProperty(values, type, {
+      configurable: true,
+      writable: true,
+      enumerable: true,
+      value: {
+        points: p
+      }
+    });
+  });
+  jsonfile.writeFile(WG_VALUES_FILE, values, function(err) {
+    if (err) {
+      console.log('Filaed saving values: ', err);
+    }
+  })
 }
 
 // Update Daily Rate for all members
 function updateDaily() {
   wGuildNations.forEach(function (member, name) {
+    invalidateCache(name);
     member.updateRate(); // update daily rate
   });
 }
@@ -833,6 +886,10 @@ function updateMonthly() {
   wGuildNations.forEach(function (member) {
     member.updatePoints();
   });
+}
+
+function invalidateCache(nation) {
+  nationCache.delete(nation);
 }
 
 // Run hourly, but 1 minute after daily update
