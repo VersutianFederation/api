@@ -547,7 +547,7 @@ app.get('/wg/values', function(req, res) {
         if (set) {
           wgValues.set(type, set);
         }
-        res.send(getPointValue(type));
+        res.send(getPointValue(type).toString());
       } else {
         res.status(403).send('0');
       }
