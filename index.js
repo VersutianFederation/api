@@ -205,73 +205,88 @@ jsonfile.readFile(WG_DATA_FILE, function(err, obj) {
   }
 });
 
+// List of items. key is item id.
+var items = new Map();
+
+var itemSpaceMatcher = / /g;
+var itemCharacterMatcher = /^[a-zA-Z0-9_]+$/;
+
 // Item inventory data
-function WGuildItem(name, type, rewardCallback) {
+function WGuildItem(name, type, extra) {
+  this.extra = extra;
   this.name = name; // Display name of the item
-  this.type = type; // Equip slot or type for non cosmetics
-  this.rewardCallback = rewardCallback; // For rewarding WGP or adding it to player's inventory
-}
-
-// Reward callback helpers
-// WGP
-function rewardWGP(nation, amount) {
-  nation.addPoints(amount);
-}
-
-// Cosmetics
-function addToInventory(nation, drop) {
-  if (drop.item.type === "lootbox") {
-    nation.storage.push(drop);
-  } else if (drop.item.type.startsWith("cosmetic")) {
-    nation.inventory.push(drop);
+  if (type === "points") {
+    this.name = this.extra + " WGP";
   }
+  this.id = name.replace(itemSpaceMatcher, "_").replace(itemCharacterMatcher, "").toLowerCase();
+  this.type = type; // Equip slot or type for non cosmetics
+  this.rewardCallback = function() {}; // For rewarding WGP or adding it to player's inventory
+  if (type.startsWith("cosmetic")) {
+    this.rewardCallback = function(nation, drop) {
+      nation.inventory.push(drop)
+    }
+  } else if (type === "lootbox") {
+      nation.storage.push(drop);
+  } else if (type === "points") {
+    this.rewardCallback = function(nation) {
+      nation.addPoints(this.extra);
+    }
+  }
+  this.addItem = function() {
+    items.set(this.id, this);
+  }
+  this.addItem();
 }
 
 // Items
-// WGP
-var pointsLow = new WGuildItem("115 WGP", "points", function(nation) {
-  rewardWGP(nation, 115);
-});
-var pointsMedium = new WGuildItem("115 WGP", "points", function(nation) {
-  rewardWGP(nation, 200);
-});
-var pointsHigh = new WGuildItem("115 WGP", "points", function(nation) {
-  rewardWGP(nation, 500);
-});
-var pointsHigher = new WGuildItem("115 WGP", "points", function(nation) {
-  rewardWGP(nation, 630);
-});
-var pointsHigher = new WGuildItem("115 WGP", "points", function(nation) {
-  rewardWGP(nation, 1000);
-});
-var pointsHigherest = new WGuildItem("115 WGP", "points", function(nation) {
-  rewardWGP(nation, 5000);
-});
+// Points
+var pointsLow = new WGuildItem("WGP", "points", 115);
+var pointsMedium = new WGuildItem("WGP", "points", 200);
+var pointsHigh = new WGuildItem("WGP", "points", 500);
+var pointsHigher = new WGuildItem("WGP", "points", 630);
+var pointsHighest = new WGuildItem("WGP", "points", 1000);
+var pointsHigherest = new WGuildItem("WGP", "points", 5000);
 
 // Stamps
-var stampsLow = new WGuildItem("1000 Stamps", "stamps", function() {});
-var stampsMedium = new WGuildItem("2500 Stamps", "stamps", function() {});
-var stampsHigh = new WGuildItem("5000 Stamps", "stamps", function() {});
+var stampsLow = new WGuildItem("1000 Stamps", "stamps");
+var stampsMedium = new WGuildItem("2500 Stamps", "stamps");
+var stampsHigh = new WGuildItem("5000 Stamps", "stamps");
 
 // Sounds
-var mansNotHot = new WGuildItem("Man's Not Hot Sound", "cosmetic.sound", function(nation, drop) {
-  addToInventory(nation, drop);
-});
-var momsSpaghetti = new WGuildItem("Mom's Spaghetti Sound", "cosmetic.sound", function(nation, drop) {
-  addToInventory(nation, drop);
-});
+var mansNotHot = new WGuildItem("Man's Not Hot Sound", "cosmetic.sound");
+var momsSpaghetti = new WGuildItem("Mom's Spaghetti Sound", "cosmetic.sound");
 
 // Backgrounds
-var grayBackground = new WGuildItem("Gray Background", "cosmetic.background", function(nation, drop) {
-  addToInventory(nation, drop);
-});
-var limeBackground = new WGuildItem("Lime Background", "cosmetic.background", function() {
-
-});
+var backgroundGray = new WGuildItem("Gray Background", "cosmetic.background");
+var backgroundLime = new WGuildItem("Lime Background", "cosmetic.background");
+var backgroundBrown = new WGuildItem("Brown Background", "cosmetic.background");
+var backgroundSlate = new WGuildItem("Slate Gradient", "cosmetic.background");
+var backgroundPurple = new WGuildItem("Purple Background", "cosmetic.background");
+var backgroundPink = new WGuildItem("Pink Background", "cosmetic.background");
+var backgroundCyan = new WGuildItem("Cyan Background", "cosmetic.background");
+var backgroundVersutia = new WGuildItem("Versutian Gradient Background", "cosmetic.background");
+var backgroundRainbow = new WGuildItem("Rainbow Gradient Background", "cosmetic.background");
+var backgroundVersutiaPulse = new WGuildItem("Pulsing Versutian Gradient Background");
 
 // Effects
+var effectSoot = new WGuildItem("Soot Showers Effect", "cosmetic.effect");
+var effectRay = new WGuildItem("Ray of Hope Effect", "cosmetic.effect");
+var effectHeart = new WGuildItem("Firey Passion Effect", "cosmetic.effect");
 
-// Item economy data
+// Flags
+var flagWave = new WGuildItem("Flag Wave", "cosmetic.flag");
+
+// Hats
+var hatBaseball = new WGuildItem("Baseball Cap", "cosmetic.hat");
+var hatTopHat = new WGuildItem("Top Hat", "cosmetic.hat");
+var hatCrown = new WGuildItem("Crown", "cosmetic.hat");
+
+// Skins
+var winterWonderland = new WGuildItem("Winter Wonderland 2017", "cosmetic.skin");
+
+// Glows
+var specialGlow = new WGuildItem("Gilded Glow", "cosmetic.glow");
+
 function WGuildBoxDropData(item, box, tier, special) {
   this.item = item;
   this.box = box;
@@ -279,9 +294,12 @@ function WGuildBoxDropData(item, box, tier, special) {
   this.special = special;
 }
 
+var lootboxes = new Map();
+
 // Lootbox data
 function WGuildBoxData(name) {
   this.name = name;
+  this.id = name.replace(itemSpaceMatcher, "_").replace(itemCharacterMatcher, "").toLowerCase();
   this.cost = 100;
   this.odds = [0.65, 0.85, 0.95, 0.98]; // Odds array, must match 
   this.contents = new Map();
@@ -294,13 +312,17 @@ function WGuildBoxData(name) {
   }
   this.addContents = function(tier, item) {
     if (typeof(tier) === "number") {
-      tier = tiers[tier];
+      tier = this.tiers[tier];
     }
-    this.contents.get(tier).push(item);
+    if (Array.isArray(item)) {
+      Array.prototype.push.apply(this.contents.get(tier), item)
+    } else {
+      this.contents.get(tier).push(item);
+    }
   }
   this.open = function(nation) {
-    nation.openLootbox(cost);
-    return roll(nation);
+    nation.openLootbox(this.cost);
+    return this.roll(nation);
   }
   this.roll = function(nation) {
     // Roll the numbers
@@ -315,15 +337,15 @@ function WGuildBoxData(name) {
       nation.lootBoost = false;
     }
     var tier; // loot tier
-    var items; // possible items in tier
-    tiers.forEach(function(value, index) {
-      if (tierRoll <= odds[index] || index === odds.length) {
+    var loot; // possible items in tier
+    this.tiers.forEach(function(value, index) {
+      if (index === odds.length || tierRoll <= odds[index]) {
         tier = index + 1;
         return;
       }
     });
-    items = contents.get(tiers[tier - 1]);
-    var item = items[Math.floor(Math.random() * items.length)]; // what item in the tier
+    loot = this.contents.get(this.tiers[tier - 1]);
+    var item = loot[Math.floor(Math.random() * loot.length)]; // what item in the tier
     nation.lootBoost = Math.random() <= 0.01; // if special
     // Notify admin Discord
     request({
@@ -357,25 +379,54 @@ function WGuildBoxData(name) {
       return new WGuildBoxDropData(item, this, tier, nation.lootBoost);
     });
   }
+  this.addItem = function() {
+    lootboxes.set(this.id, this);
+  }
+  this.addItem();
 }
 
 // Lootboxes
 var firstBox = new WGuildBoxData("Lootbox Prime");
 firstBox.refreshTiers();
-firstBox.addContents(0, ['115 WGP', 'Gray Background', 'Lime Background', 'Brown Background']);
-firstBox.addContents(1, ['Baseball Cap', 'Slate Gradient', 'Purple Background', 'Pink Background', 'Cyan Background', '1000 Stamps', '200 WGP']);
-firstBox.addContents(2, ['Versutian Gradient Background', 'Top Hat', 'Soot Showers Effect', '500 WGP']);
-firstBox.addContents(3, ['Flag Wave', 'Rainbow Gradient Background', 'Ray of Hope Effect', "Man's Not Hot Sound", '630 WGP', '2500 Stamps']);
-firstBox.addContents(4, ['Pulsing Versutian Gradient Background', 'Crown', "Mom's Spaghetti Sound", 'Firey Passion Effect', '5000 Stamps', '1000 WGP']);
-var winterLoot2017T1 = new WGuildBoxData("Winter 2017 Loot Tier I");
+firstBox.addContents(0, [pointsLow, backgroundGray, backgroundLime, backgroundBrown]);
+firstBox.addContents(1, [hatBaseball, backgroundSlate, backgroundPurple, backgroundPink, backgroundCyan, stampsLow, pointsMedium]);
+firstBox.addContents(2, [backgroundVersutia, hatTopHat, effectSoot, pointsHigh]);
+firstBox.addContents(3, [flagWave, backgroundRainbow, effectRay, mansNotHot, pointsHigher, stampsMedium]);
+firstBox.addContents(4, [backgroundVersutiaPulse, hatCrown, momsSpaghetti, effectHeart, stampsHigh, pointsHighest]);
+var firstFreeBox = new WGuildBoxData("Lootbox Prime (Free)");
+firstFreeBox.cost = 0;
+firstFreeBox.refreshTiers();
+firstFreeBox.addContents(0, [pointsLow, backgroundGray, backgroundLime, backgroundBrown]);
+firstFreeBox.addContents(1, [hatBaseball, backgroundSlate, backgroundPurple, backgroundPink, backgroundCyan, stampsLow, pointsMedium]);
+firstFreeBox.addContents(2, [backgroundVersutia, hatTopHat, effectSoot, pointsHigh]);
+firstFreeBox.addContents(3, [flagWave, backgroundRainbow, effectRay, mansNotHot, pointsHigher, stampsMedium]);
+firstFreeBox.addContents(4, [backgroundVersutiaPulse, hatCrown, momsSpaghetti, effectHeart, stampsHigh, pointsHighest]);
+var winterLoot2017T1 = new WGuildBoxData("Winter 2017 Gift Box");
 winterLoot2017T1.tiers = ["Frosty", "Festive", "Merry", "Jolly", "Miracle"];
+winterLoot2017T1.cost = 0;
 winterLoot2017T1.refreshTiers();
-var winterLoot2017T2 = new WGuildBoxData("Winter 2017 Loot Tier II");
+var winterLoot2017T2 = new WGuildBoxData("Winter 2017 Gift Stocking");
+winterLoot2017T2.cost = 0;
 winterLoot2017T2.tiers = ["Frosty", "Festive", "Merry", "Jolly", "Miracle"]
 winterLoot2017T2.refreshTiers();
-var winterLoot2017T3 = new WGuildBoxData("Winter 2017 Loot Tier III");
+var winterLoot2017T3 = new WGuildBoxData("Winter 2017 Gift Sack");
+winterLoot2017T3.cost = 0;
 winterLoot2017T3.tiers = ["Frosty", "Festive", "Merry", "Jolly", "Miracle"]
 winterLoot2017T3.refreshTiers();
+var ambassadorSelectLootbox = new WGuildBoxData("Ambassador Select Lootbox");
+ambassadorSelectLootbox.tiers = ["Ambassador Select"];
+ambassadorSelectLootbox.odds = [];
+ambassadorSelectLootbox.refreshTiers();
+ambassadorSelectLootbox.addContents(0, [backgroundVersutiaPulse, hatCrown, momsSpaghetti, effectHeart, stampsHigh, pointsHighest]);
+var winterWheel2017 = new WGuildBoxData("Winter Wheel of Random Rewards");
+winterWheel2017.tiers = ['Common', 'Uncommon', 'Rare', 'Very Rare', 'Ultra Rare', 'Inconceivably Rare'];
+winterWheel2017.odds = [0.7, 0.9, 0.974, 0.994, 0.999];
+winterWheel2017.refreshTiers();
+winterWheel2017.addContents(0, [backgroundGray, backgroundSlate, backgroundBrown]);
+winterWheel2017.addContents(1, firstBox);
+winterWheel2017.addContents(2, [pointsLow, pointsMedium, pointsHigh]);
+winterWheel2017.addContents(3, stampsMedium);
+winterWheel2017.addContents(4, ambassadorSelectLootbox);
 
 // Nation data for wGuild
 function WGuildNationData(name) {
@@ -388,9 +439,11 @@ function WGuildNationData(name) {
   this.rateCap = DAILY_RATE_CAP; // User specific daily rate cap
   this.lootBoost = false; // Loot drop boost from special item
   this.highestRank = 2; // Highest rank achieved by this nation
-  this.inventory = [];
-  this.storage = [];
-  this.equipment = new WGuildEquipment();
+  this.inventory = []; // Array of item IDs in inventory
+  this.storage = []; // Array of lootbox IDs in storage
+  this.equipment = new WGuildEquipment(); // Object of inventory indices
+  this.duels = new Map(); // Dueling nations
+  this.pass = null; // Pass
   // The current wGuild rank
   this.getRank = function() {
     return Math.floor(this.points / 1000);
@@ -468,20 +521,109 @@ function WGuildNationData(name) {
       this.rate--;
     }
   };
-  // Open a lootbox if there are any
   this.openLootbox = function(cost) {
     this.points -= cost;
     this.livePoints -= cost;
   };
+  this.equipItem = function(id) {
+    var slot = items.get(inventory[id]).type.split(".")[1];
+    switch (slot) {
+      case "sound":
+          this.equipment.sound = id;
+        break;
+      case "background":
+          this.equipment.background = id;
+        break;
+      case "effect":
+        this.equipment.effect = id;
+        break;
+      case "flag":
+        this.equipment.flag = id;
+        break;
+      case "hat":
+        this.equipment.hat = id;
+        break;
+      case "glow":
+        this.equipment.glow = id;
+        break;
+      case "skin":
+        this.equipment.skin = id;
+      default:
+        break;
+    }
+  }
+  this.unequipSlot = function(slot) {
+    switch (slot) {
+      case "sound":
+          this.equipment.sound = -1;
+        break;
+      case "background":
+          this.equipment.background = -1;
+        break;
+      case "effect":
+        this.equipment.effect = -1;
+        break;
+      case "flag":
+        this.equipment.flag = -1;
+        break;
+      case "hat":
+        this.equipment.hat = -1;
+        break;
+      case "glow":
+        this.equipment.glow = -1;
+        break;
+      case "skin":
+        this.equipment.skin = -1;livePoints
+      default:
+        break;
+    }
+  }
+  this.startDuel = function(nation) {
+    this.duels.set(nation, nation.livePoints)
+    nation.duels.set(this, this.livePoints);
+  }
+  this.endDuel = function(nation) {
+    var enemyGain = nation.livePoints - this.duels.get(nation);
+    var selfGain = this.livePoints - nation.duels.get(this);
+    if (enemyGain === selfGain) {
+      // tie
+    } else if (selfGain > enemyGain) {
+      // win
+    } else {
+      // lose
+    }
+  }
 }
 
+// Index in inventory
 function WGuildEquipment() {
-  this.sound = {};
-  this.background = {};
-  this.glow = {};
-  this.hat = {};
-  this.flag = {};
-  this.overlay = {};
+  this.sound = -1;
+  this.background = -1;
+  this.effect = -1;
+  this.flag = -1;
+  this.hat = -1;
+  this.glow = -1;
+  this.skin = -1;
+}
+
+function GuildPass(nation) {
+  this.nation = nation;
+  this.duelTokens = 1;
+  this.weeklyDuelTokens = 1;
+  this.refreshDuels = function() {
+
+  }
+}
+
+function QuestPath() {
+  this.name = name;
+  
+}
+
+function Quest(name, description) {
+  this.name = name;
+  this.description = description;
+  this.completed = false;
 }
 
 app.get('/wg/points/add', function(req, res) {
@@ -581,7 +723,7 @@ app.get('/wg/points/add', function(req, res) {
   }
 });
 
-app.get('/wg/points/get', function(req, res) {
+app.get('/wg/member/list', function(req, res) {
   res.json(leaderboard);
 });
 
@@ -691,17 +833,24 @@ app.get('/wg/member/status', function(req, res) {
 
 app.get('/wg/loot/roll', function(req, res) {
   var token = req.cookies.token; // JWT
+  var index = req.query.index; // Storage index
   // are they authed
-  if (token) {
+  if (token && index && index > 0) {
     // verify JWT
     admin.auth().verifyIdToken(token).then(function(user) {
       var member = user.uid;
       // are they a member
       if (wGuildNations.has(member)) {
         var nation = wGuildNations.get(member);
-        // if they have a lootbox, open it
-        if (nation.openLootbox()) {
-
+        if (index < nation.storage.length) {
+          var drop = lootboxes.get(nation.storage[index]).open(nation);
+          drop.item.rewardCallback(nation, drop);
+          res.json({
+            rarity: drop.box.tiers[drop.tier - 1],
+            special: drop.special,
+            name: drop.item.name,
+            id: drop.item.id
+          });
         } else {
           res.status(403).send('0');
         }
@@ -717,24 +866,32 @@ app.get('/wg/loot/roll', function(req, res) {
   }
 });
 
-/* TODO
 app.get('/wg/loot/equip', function(req, res) {
-  var item = req.query.item;
-  var nation = req.query.nation;
-  if (item && nation) {
-      request({method: 'POST', uri: lootkeys.ping, json: true, body: {content: nation + ' equipped ' + item}}, function(err, response, body) {
-         if (err) {
-           res.send('0');
-         } else {
-           res.send('1');
-         }
-      });
+  var token = req.cookies.token; // JWT
+  // are they authed
+  if (token) {
+    // verify JWT
+    admin.auth().verifyIdToken(token).then(function(user) {
+      // are they a member?
+      if (wGuildNations.has(user.uid)) {
+        var nation = wGuildNations.get(user.uid);
+        if (!index || index < -1 || index >= nation.inventory.length) {
+          index = -1;
+        }
+        nation.equipItem(index);
+      } else {
+        res.status(403).send('0');
+      }
+    }).catch(function(error) {
+      console.log("Error verifying token: ", error);
+      res.status(403).send('0');
+    });
   } else {
-    res.send('0');
+    res.status(400).send('0');
   }
 });
-*/
 
+// TODO: use actual inventory
 app.get('/wg/loot/inventory', function(req, res) {
   var token = req.cookies.token; // JWT
   // are they authed
@@ -830,8 +987,15 @@ app.get('/admin/monthly', function(req, res) {
   }
 });
 
+// TODO: quests
+
+// TODO: duels
+
+// TODO: winter wheel
+
 app.listen(port, hostname);
 
+// TODO: serialize new data
 var db = {};
 var leaderboard = {};
 
